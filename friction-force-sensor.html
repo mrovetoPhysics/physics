@@ -1,0 +1,556 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Friction Force Sensor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lab-bench instrument. Scene + live graph on the left (the projector view), controls and run log on the right; stacks on phones. */
+:root {
+  --bg: #eef1f3;
+  --panel: #ffffff;
+  --ink: #17212b;
+  --muted: #5b6874;
+  --line: #d3dae0;
+  --accent: #1f6fb2;
+  --bench: #c99b62;
+  --bench-dark: #9c7244;
+  --felt: #3d7a5b;
+  --sand: #b8a27c;
+  --block: #6c7a89;
+  --brass: #c4983f;
+  --sensor: #26333f;
+  --screen: #0f1a14;
+  --screen-ink: #8ff0b4;
+  --t1: #1f6fb2; --t2: #d0532a; --t3: #2f8f5b; --t4: #8a4fc4; --t5: #b5861b; --t6: #c23d7a;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171c; --panel: #19212a; --ink: #e6ecf1; --muted: #93a1ad; --line: #2b3640; --accent: #5aa6e6;
+    --bench: #8a6740; --bench-dark: #6a4d2e; --felt: #2e6048; --sand: #8c7a5a; --block: #8695a4; --brass: #c9a24c;
+    --sensor: #0c1116; --screen: #07100b; --screen-ink: #7fe8a6;
+    --t1: #5aa6e6; --t2: #f07d55; --t3: #5cc78e; --t4: #b58af0; --t5: #e2b545; --t6: #ef6fa8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171c; --panel: #19212a; --ink: #e6ecf1; --muted: #93a1ad; --line: #2b3640; --accent: #5aa6e6;
+  --bench: #8a6740; --bench-dark: #6a4d2e; --felt: #2e6048; --sand: #8c7a5a; --block: #8695a4; --brass: #c9a24c;
+  --sensor: #0c1116; --screen: #07100b; --screen-ink: #7fe8a6;
+  --t1: #5aa6e6; --t2: #f07d55; --t3: #5cc78e; --t4: #b58af0; --t5: #e2b545; --t6: #ef6fa8;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.stage { display: grid; gap: 0; overflow: hidden; }
+.scene-wrap { position: relative; }
+canvas { display: block; width: 100%; }
+#scene { height: 230px; }
+#graph { height: 340px; border-top: 1px solid var(--line); }
+@media (max-width: 520px) { #scene { height: 170px; } #graph { height: 260px; } }
+.readout {
+  position: absolute; top: 12px; right: 12px; background: var(--screen); color: var(--screen-ink);
+  font-family: var(--font-mono); border-radius: 6px; padding: 6px 12px; text-align: right; line-height: 1.15;
+  box-shadow: inset 0 0 0 1px rgba(127,232,166,0.18);
+}
+.readout .lab { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
+.readout .val { font-size: clamp(1.4rem, 3.2vw, 2rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+.scene-tag { position: absolute; left: 12px; top: 12px; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.side { display: grid; gap: 16px; }
+.controls { padding: 16px; display: grid; gap: 16px; }
+.group { display: grid; gap: 6px; }
+.group > .glabel { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.group > .glabel output { font-family: var(--font-mono); text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 500; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { padding: 8px 6px; text-align: center; cursor: pointer; font-size: 0.88rem; line-height: 1.25; border-left: 1px solid var(--line); user-select: none; }
+.seg label:first-of-type { border-left: 0; }
+.seg label small { display: block; color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; }
+.seg input:checked + label { background: var(--accent); color: #fff; }
+.seg input:checked + label small { color: rgba(255,255,255,0.85); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -3px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; font-weight: 600; font-size: 0.92rem; border-radius: 8px; padding: 9px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1 1 140px; }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; color: var(--muted); }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.log { padding: 14px 16px 16px; display: grid; gap: 10px; }
+.log h2, .why h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; }
+.log-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-size: 0.74rem; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+.tag { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-left: 4px; }
+.empty { color: var(--muted); font-size: 0.88rem; }
+.why { padding: 16px; display: grid; gap: 10px; }
+.why-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; }
+.why p { margin: 0; max-width: 65ch; }
+.why h3 { font-family: var(--font-display); font-weight: 600; font-size: 1rem; margin: 0 0 4px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Friction Force Sensor</h1>
+    <p>Drag a block with a force sensor at a steady speed and watch the force graph. Change one thing at a time, then compare the traces.</p>
+  </header>
+
+  <div class="main">
+    <section class="panel stage" aria-label="Experiment">
+      <div class="scene-wrap">
+        <canvas id="scene" aria-label="Side view of the block being pulled across the surface"></canvas>
+        <div class="scene-tag" id="sceneTag">Ready</div>
+        <div class="readout" aria-live="off"><div class="lab">Force sensor</div><div class="val" id="readout">0.00 N</div></div>
+      </div>
+      <canvas id="graph" aria-label="Graph of force versus time for each run"></canvas>
+    </section>
+
+    <aside class="side">
+      <section class="panel controls" aria-label="Setup">
+        <div class="group">
+          <div class="glabel">Face touching the surface</div>
+          <div class="seg" role="radiogroup">
+            <input type="radio" name="face" id="faceLarge" value="large" checked><label for="faceLarge">Large face<small>160 cm²</small></label>
+            <input type="radio" name="face" id="faceSmall" value="small"><label for="faceSmall">Small end<small>50 cm²</small></label>
+          </div>
+        </div>
+        <div class="group">
+          <div class="glabel">Pull speed <output id="speedOut" for="speed">6 cm/s</output></div>
+          <input type="range" id="speed" min="2" max="12" step="1" value="6">
+          <div class="ticks"><span>2 cm/s</span><span>12 cm/s</span></div>
+        </div>
+        <div class="group">
+          <div class="glabel">Mass on block</div>
+          <div class="seg" role="radiogroup">
+            <input type="radio" name="mass" id="mass0" value="0" checked><label for="mass0">Block<small>1.0 kg</small></label>
+            <input type="radio" name="mass" id="mass1" value="0.5"><label for="mass1">+ 500 g<small>1.5 kg</small></label>
+            <input type="radio" name="mass" id="mass2" value="1"><label for="mass2">+ 1 kg<small>2.0 kg</small></label>
+          </div>
+        </div>
+        <div class="group">
+          <div class="glabel">Surface</div>
+          <div class="seg" role="radiogroup">
+            <input type="radio" name="surf" id="surfWood" value="wood" checked><label for="surfWood">Wood</label>
+            <input type="radio" name="surf" id="surfFelt" value="felt"><label for="surfFelt">Felt</label>
+            <input type="radio" name="surf" id="surfSand" value="sand"><label for="surfSand">Sandpaper</label>
+          </div>
+        </div>
+        <div class="buttons">
+          <button class="primary" id="startBtn">Start pull</button>
+          <button id="skipBtn" disabled>Skip to end</button>
+        </div>
+        <label class="check"><input type="checkbox" id="keep" checked> Keep earlier runs on the graph</label>
+      </section>
+
+      <section class="panel log" aria-label="Run log">
+        <div class="log-head"><h2>Runs</h2><button id="clearBtn">Clear all</button></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Run</th><th>Setup</th><th class="num">Break-away</th><th class="num">Sliding</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="logEmpty" hidden>No runs yet. Press Start pull.</div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel why" aria-label="What to notice">
+    <h2>What to notice</h2>
+    <div class="why-grid">
+      <div><h3>The peak, then the plateau</h3><p>The force climbs while the block sits still, because static friction matches the pull. Right when the block breaks free the force drops to a lower, steady value. That steady value is kinetic friction.</p></div>
+      <div><h3>Contact area</h3><p>Flip the block onto its small end. The weight is the same, so the normal force is the same. It now presses on a smaller area, which squeezes the microscopic bumps together harder. The two effects cancel, so friction barely changes.</p></div>
+      <div><h3>Pull speed</h3><p>Pull slowly, then quickly. At high speed the force builds up faster, so the block breaks free sooner, but it breaks free at the same peak force and slides at the same plateau. Neither static nor kinetic friction depends on how fast you pull.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const G = 9.8, K = 150, T_END = 8, DT = 0.0005, SAMPLE = 1 / 60;
+  const SURF = {
+    wood: { name: "Wood", muS: 0.42, muK: 0.30 },
+    felt: { name: "Felt", muS: 0.30, muK: 0.22 },
+    sand: { name: "Sandpaper", muS: 0.72, muK: 0.55 }
+  };
+  const FACE = {
+    large: { name: "Large face", w: 0.16, h: 0.05, area: 160 },
+    small: { name: "Small end", w: 0.10, h: 0.16, area: 50 }
+  };
+  const TRACE_VARS = ["--t1", "--t2", "--t3", "--t4", "--t5", "--t6"];
+
+  const $ = (id) => document.getElementById(id);
+  const scene = $("scene"), graph = $("graph");
+  const sctx = scene.getContext("2d"), gctx = graph.getContext("2d");
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  let runs = [];
+  let runCount = 0;
+  let live = null; // { run, t0, idx }
+  let idle = { face: "large", mass: 1, surf: "wood" };
+
+  function getSetup() {
+    const face = document.querySelector('input[name="face"]:checked').value;
+    const surf = document.querySelector('input[name="surf"]:checked').value;
+    const extra = parseFloat(document.querySelector('input[name="mass"]:checked').value);
+    const speed = parseInt($("speed").value, 10);
+    return { face, surf, mass: 1 + extra, extra, speed };
+  }
+
+  // gaussian-ish noise
+  const noise = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+
+  function simulate(setup) {
+    const s = SURF[setup.surf];
+    const m = setup.mass, N = m * G, v = setup.speed / 100;
+    const fsMax = s.muS * N, fk = s.muK * N;
+    const phi1 = Math.random() * 6.28, phi2 = Math.random() * 6.28;
+    const cb = 2 * 0.85 * Math.sqrt(K * m);
+    const pts = [];
+    // Static phase: the block stays put and the sensor reading rises steadily.
+    // A faster pull only reaches the maximum sooner; the maximum itself is always mu_s * N.
+    const tSlip = fsMax / (K * v);
+    for (let t = 0; t < tSlip; t += SAMPLE) {
+      pts.push({ t, F: Math.min(fsMax, Math.max(0, K * v * t + noise() * 0.03)), xb: 0, xp: v * t });
+    }
+    // Break-away: the exact peak, then an immediate drop to the kinetic value.
+    pts.push({ t: tSlip, F: fsMax, xb: 0, xp: v * tSlip });
+    let xb = v * tSlip - fk / K, vb = v;
+    pts.push({ t: tSlip, F: fk, xb, xp: v * tSlip });
+    // Sliding phase: the block keeps pace with the pull and friction stays near mu_k * N.
+    let t = tSlip, nextSample = (Math.floor(tSlip / SAMPLE) + 1) * SAMPLE;
+    while (t < T_END) {
+      t += DT;
+      const xp = v * t;
+      const Fs = K * Math.max(0, xp - xb);
+      const rough = 0.03 * Math.sin(6.283 * xb / 0.031 + phi1) + 0.018 * Math.sin(6.283 * xb / 0.0117 + phi2);
+      const a = (Fs - fk * (1 + rough) - cb * (vb - v)) / m;
+      vb = Math.max(0, vb + a * DT);
+      xb += vb * DT;
+      if (t >= nextSample - 1e-9) {
+        pts.push({ t, F: Math.max(0, Fs + noise() * 0.03), xb, xp });
+        nextSample += SAMPLE;
+      }
+    }
+    const peak = fsMax;
+    let traceMax = 0;
+    for (const p of pts) traceMax = Math.max(traceMax, p.F);
+    const sl = pts.filter(p => p.t >= tSlip + 1.2);
+    const sliding = sl.length ? sl.reduce((a, p) => a + p.F, 0) / sl.length : NaN;
+    return { setup, pts, peak, traceMax, sliding, tSlip, N };
+  }
+
+  function addRun(setup, sample) {
+    const r = simulate(setup);
+    runCount += 1;
+    r.id = runCount;
+    r.color = TRACE_VARS[(runCount - 1) % TRACE_VARS.length];
+    r.sample = !!sample;
+    r.shown = sample ? r.pts.length : 0;
+    if (!$("keep").checked && !sample) runs = [];
+    runs.push(r);
+    return r;
+  }
+
+  // ---------- canvas sizing ----------
+  function fit(c, ctx) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w, h };
+  }
+
+  // ---------- scene ----------
+  function drawScene(state) {
+    const { w, h } = fit(scene, sctx);
+    const ctx = sctx;
+    ctx.clearRect(0, 0, w, h);
+    const setup = state.setup;
+    const face = FACE[setup.face];
+    const scale = Math.min(w / 1.05, h / 0.42); // px per meter
+    const groundY = h - 46;
+    const blockLeft = Math.max(24, w * 0.12);
+    const off = state.xb * scale;
+
+    // surface strip
+    const surfColor = setup.surf === "felt" ? css("--felt") : setup.surf === "sand" ? css("--sand") : css("--bench");
+    ctx.fillStyle = css("--bench-dark");
+    ctx.fillRect(0, groundY, w, h - groundY);
+    ctx.fillStyle = surfColor;
+    ctx.fillRect(0, groundY, w, 14);
+    // texture scrolls opposite to block motion
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, groundY, w, 14); ctx.clip();
+    if (setup.surf === "wood") {
+      ctx.strokeStyle = css("--bench-dark"); ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
+      const step = 46;
+      for (let x = -((off) % step) - step; x < w + step; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, groundY + 4); ctx.bezierCurveTo(x + 15, groundY + 2, x + 25, groundY + 9, x + 40, groundY + 7); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = setup.surf === "sand" ? css("--bench-dark") : css("--panel");
+      ctx.globalAlpha = setup.surf === "sand" ? 0.55 : 0.18;
+      const step = 9;
+      for (let x = -((off) % (step * 6)) - step * 6; x < w + step; x += step) {
+        for (let j = 0; j < 3; j++) {
+          const yy = groundY + 3 + ((Math.abs(Math.round(x * 7 + j * 13)) % 9));
+          ctx.fillRect(x + j * 3, yy, setup.surf === "sand" ? 2 : 1.5, setup.surf === "sand" ? 2 : 1.5);
+        }
+      }
+    }
+    ctx.restore();
+    // distance ticks so motion is visible
+    ctx.fillStyle = css("--muted"); ctx.font = "11px " + css("--font-mono");
+    ctx.strokeStyle = css("--muted"); ctx.lineWidth = 1; ctx.globalAlpha = 0.7;
+    const tickStep = 0.1 * scale;
+    for (let i = -1; i < w / tickStep + 2; i++) {
+      const worldX = Math.floor(state.xb / 0.1) * 0.1 + i * 0.1;
+      const x = blockLeft + (worldX - state.xb) * scale;
+      if (x < -20 || x > w + 20) continue;
+      ctx.beginPath(); ctx.moveTo(x, groundY + 14); ctx.lineTo(x, groundY + 22); ctx.stroke();
+      const lbl = Math.round(worldX * 100);
+      if (lbl >= 0 && lbl % 20 === 0) ctx.fillText(lbl + " cm", x + 3, groundY + 34);
+    }
+    ctx.globalAlpha = 1;
+
+    // block
+    const bw = face.w * scale, bh = face.h * scale;
+    const bx = blockLeft, by = groundY - bh;
+    ctx.fillStyle = css("--block");
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = css("--ink"); ctx.globalAlpha = 0.35; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1); ctx.globalAlpha = 1;
+    // added masses
+    const discs = Math.round(setup.extra * 2); // 500 g each
+    for (let i = 0; i < discs; i++) {
+      const dh = Math.max(6, 0.018 * scale), dw = Math.min(bw * 0.8, 0.07 * scale);
+      ctx.fillStyle = css("--brass");
+      ctx.fillRect(bx + bw / 2 - dw / 2, by - dh * (i + 1) - i, dw, dh);
+    }
+    // string + sensor
+    const hookY = groundY - Math.min(bh * 0.5, 0.025 * scale);
+    const L0 = 0.42;
+    const stretch = Math.max(0, state.xp - state.xb);
+    const sx = bx + bw + (L0 + stretch) * scale;
+    // spring section shows stretch
+    ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.4;
+    const springStart = bx + bw + 0.22 * scale, springEnd = sx - 0.04 * scale;
+    ctx.beginPath(); ctx.moveTo(bx + bw, hookY); ctx.lineTo(springStart, hookY);
+    const coils = 10, amp = 5;
+    for (let i = 0; i <= coils * 2; i++) {
+      const x = springStart + (springEnd - springStart) * i / (coils * 2);
+      ctx.lineTo(x, hookY + (i === 0 || i === coils * 2 ? 0 : (i % 2 ? -amp : amp)));
+    }
+    ctx.lineTo(sx, hookY); ctx.stroke();
+    // sensor body
+    const sw = Math.max(54, 0.12 * scale), sh = 26;
+    ctx.fillStyle = css("--sensor");
+    roundRect(ctx, sx, hookY - sh / 2, sw, sh, 5); ctx.fill();
+    ctx.fillStyle = css("--screen");
+    roundRect(ctx, sx + 6, hookY - 7, sw - 26, 14, 2); ctx.fill();
+    ctx.fillStyle = css("--screen-ink"); ctx.font = "600 10px " + css("--font-mono");
+    ctx.fillText(state.F.toFixed(1), sx + 9, hookY + 3.5);
+    // handle / pull arrow
+    ctx.strokeStyle = css("--accent"); ctx.fillStyle = css("--accent"); ctx.lineWidth = 2.5;
+    const ax = sx + sw + 8;
+    ctx.beginPath(); ctx.moveTo(ax, hookY); ctx.lineTo(ax + 34, hookY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax + 42, hookY); ctx.lineTo(ax + 32, hookY - 6); ctx.lineTo(ax + 32, hookY + 6); ctx.closePath(); ctx.fill();
+    ctx.font = "600 12px " + css("--font-mono");
+    ctx.fillText(setup.speed + " cm/s", Math.min(ax, w - 62), hookY - 12);
+    // labels
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body");
+    ctx.fillText(face.area + " cm² in contact", bx, groundY + 34 > h - 4 ? h - 4 : h - 6);
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // ---------- graph ----------
+  function niceStep(max) {
+    const raw = max / 5, p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / p;
+    return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p;
+  }
+
+  function drawGraph() {
+    const { w, h } = fit(graph, gctx);
+    const ctx = gctx;
+    ctx.clearRect(0, 0, w, h);
+    const padL = 52, padR = 18, padT = 18, padB = 44;
+    const pw = w - padL - padR, ph = h - padT - padB;
+    let ymaxData = 5;
+    for (const r of runs) ymaxData = Math.max(ymaxData, r.traceMax * 1.12);
+    const step = niceStep(ymaxData);
+    const ymax = Math.ceil(ymaxData / step) * step;
+    const X = (t) => padL + (t / T_END) * pw;
+    const Y = (F) => padT + ph - (F / ymax) * ph;
+
+    ctx.font = "12px " + css("--font-mono");
+    ctx.lineWidth = 1;
+    // grid + y ticks
+    for (let v = 0; v <= ymax + 1e-9; v += step) {
+      ctx.strokeStyle = css("--line"); ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(padL + pw, Y(v)); ctx.stroke();
+      ctx.fillStyle = css("--muted"); ctx.textAlign = "right"; ctx.fillText(String(+v.toFixed(2)), padL - 8, Y(v) + 4);
+    }
+    for (let t = 0; t <= T_END; t += 1) {
+      ctx.strokeStyle = css("--line"); ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(X(t), padT); ctx.lineTo(X(t), padT + ph); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = css("--muted"); ctx.textAlign = "center"; ctx.fillText(String(t), X(t), padT + ph + 16);
+    }
+    ctx.strokeStyle = css("--muted"); ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ph); ctx.lineTo(padL + pw, padT + ph); ctx.stroke();
+    ctx.fillStyle = css("--ink"); ctx.font = "600 13px " + css("--font-body");
+    ctx.textAlign = "center"; ctx.fillText("Time (s)", padL + pw / 2, h - 8);
+    ctx.save(); ctx.translate(14, padT + ph / 2); ctx.rotate(-Math.PI / 2); ctx.fillText("Force (N)", 0, 0); ctx.restore();
+    ctx.textAlign = "left";
+
+    // traces
+    for (const r of runs) {
+      const n = r.shown;
+      if (n < 2) continue;
+      const col = css(r.color);
+      ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.lineJoin = "round";
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const p = r.pts[i]; i ? ctx.lineTo(X(p.t), Y(p.F)) : ctx.moveTo(X(p.t), Y(p.F)); }
+      ctx.stroke();
+      // run label at end of trace
+      const last = r.pts[n - 1];
+      ctx.fillStyle = col; ctx.font = "600 12px " + css("--font-mono");
+      const lx = Math.min(X(last.t) + 6, padL + pw - 28);
+      if (n === r.pts.length) ctx.fillText("#" + r.id, lx, Y(last.F) - 6);
+    }
+  }
+
+  // ---------- log ----------
+  function speedLabel(s) { return s + " cm/s"; }
+  function renderLog() {
+    const body = $("logBody");
+    body.innerHTML = "";
+    $("logEmpty").hidden = runs.length > 0;
+    for (const r of runs) {
+      const done = r.shown >= r.pts.length;
+      const s = r.setup;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td><span class="sw" style="background:var(${r.color})"></span>#${r.id}${r.sample ? '<span class="tag">sample</span>' : ""}</td>` +
+        `<td>${FACE[s.face].name}, ${speedLabel(s.speed)}<br><span class="tag" style="margin:0">${s.mass.toFixed(1)} kg · ${SURF[s.surf].name}</span></td>` +
+        `<td class="num">${done ? r.peak.toFixed(2) + " N" : "…"}</td>` +
+        `<td class="num">${done ? r.sliding.toFixed(2) + " N" : "…"}</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  // ---------- animation ----------
+  function stateFromRun(r, i) {
+    const p = r.pts[Math.max(0, Math.min(i, r.pts.length - 1))];
+    return { setup: r.setup, xb: p.xb, xp: p.xp, F: p.F };
+  }
+
+  function frame(now) {
+    if (!live) return;
+    const r = live.run;
+    const el = (now - live.t0) / 1000;
+    let idx = r.shown || 1;
+    while (idx < r.pts.length && r.pts[idx].t <= el) idx++;
+    r.shown = idx;
+    const st = stateFromRun(r, idx - 1);
+    drawScene(st);
+    drawGraph();
+    $("readout").textContent = st.F.toFixed(2) + " N";
+    const slipping = r.tSlip !== null && st.xb > 0.0005;
+    $("sceneTag").textContent = slipping ? "Sliding" : "Not moving yet";
+    if (idx >= r.pts.length) { finish(); return; }
+    live.raf = requestAnimationFrame(frame);
+  }
+
+  function finish() {
+    if (!live) return;
+    cancelAnimationFrame(live.raf);
+    const r = live.run;
+    r.shown = r.pts.length;
+    live = null;
+    const st = stateFromRun(r, r.pts.length - 1);
+    drawScene(st); drawGraph(); renderLog();
+    $("readout").textContent = st.F.toFixed(2) + " N";
+    $("sceneTag").textContent = "Run #" + r.id + " done";
+    setRunning(false);
+  }
+
+  function setRunning(on) {
+    $("startBtn").disabled = on;
+    $("skipBtn").disabled = !on;
+    document.querySelectorAll(".controls input").forEach(i => { if (i.id !== "keep") i.disabled = on; });
+  }
+
+  function start() {
+    if (live) return;
+    const setup = getSetup();
+    const r = addRun(setup, false);
+    renderLog();
+    setRunning(true);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    live = { run: r, t0: performance.now(), raf: 0 };
+    if (reduce) { finish(); return; }
+    live.raf = requestAnimationFrame(frame);
+  }
+
+  function idleDraw() {
+    if (live) return;
+    const s = getSetup();
+    drawScene({ setup: s, xb: 0, xp: 0, F: 0 });
+    drawGraph();
+  }
+
+  // ---------- wiring ----------
+  $("startBtn").addEventListener("click", start);
+  $("skipBtn").addEventListener("click", finish);
+  $("clearBtn").addEventListener("click", () => {
+    if (live) { cancelAnimationFrame(live.raf); live = null; setRunning(false); }
+    runs = []; renderLog(); idleDraw();
+    $("readout").textContent = "0.00 N"; $("sceneTag").textContent = "Ready";
+  });
+  $("speed").addEventListener("input", () => { $("speedOut").textContent = $("speed").value + " cm/s"; idleDraw(); });
+  document.querySelectorAll('.controls input[type="radio"]').forEach(i => i.addEventListener("change", () => {
+    $("readout").textContent = "0.00 N"; $("sceneTag").textContent = "Ready"; idleDraw();
+  }));
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (!live) idleDraw(); }, 80); });
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", () => { if (!live) idleDraw(); });
+  new MutationObserver(() => { if (!live) idleDraw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  renderLog();
+  idleDraw();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!live) idleDraw(); });
+})();
+</script>
+
+</body></html>
