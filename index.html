@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physics Simulations — Mr. Roveto</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d232b; --muted: #5b6672;
+    --line: #dcd9d0; --accent: #1f5fae; --accent-soft: #e6eef8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14181d; --card: #1c2229; --ink: #e8ebee; --muted: #9aa6b2;
+            --line: #2c343d; --accent: #7fb0ec; --accent-soft: #1f2c3b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 20px 64px; }
+  header { margin-bottom: 32px; }
+  h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+       color: var(--muted); margin: 36px 0 12px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: var(--card);
+           border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 16px;
+           transition: border-color .15s, transform .15s; }
+  a.card:hover, a.card:focus-visible { border-color: var(--accent); transform: translateY(-1px); outline: none; }
+  .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+  .card p { margin: 0 0 12px; color: var(--muted); font-size: 0.93rem; }
+  .card .open { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+  .tip { margin-top: 40px; padding: 14px 16px; background: var(--accent-soft);
+         border-radius: 10px; font-size: 0.92rem; color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Physics Simulations</h1>
+    <p>Mr. Roveto's class. Click a simulation to open it. Nothing to download.</p>
+  </header>
+
+  <!-- To add a new simulation: upload its .html file, then copy one <a class="card"> block below
+       and change the href, title, and description. -->
+
+  <h2>Kinematics</h2>
+  <div class="grid">
+    <a class="card" href="incline-cart-lab.html">
+      <h3>Incline Cart Lab</h3>
+      <p>A cart rolls on a ramp while a motion detector records position and velocity. Fit the graphs, find a mystery angle, and try the graph-matching challenge.</p>
+      <span class="open">Open simulation →</span>
+    </a>
+  </div>
+
+  <h2>Forces &amp; Newton's Laws</h2>
+  <div class="grid">
+    <a class="card" href="atwood-machine.html">
+      <h3>Modified Atwood Machine</h3>
+      <p>Set the cart and hanging masses, run a trial, and fit a line to the velocity–time graph to find the acceleration.</p>
+      <span class="open">Open simulation →</span>
+    </a>
+    <a class="card" href="incline-lab.html">
+      <h3>Incline Lab</h3>
+      <p>A block slides down a 5.0 m ramp from rest. Change the setup, press Run, and record the acceleration.</p>
+      <span class="open">Open simulation →</span>
+    </a>
+    <a class="card" href="friction-force-sensor.html">
+      <h3>Friction Force Sensor</h3>
+      <p>Pull a block with a force sensor and watch the force graph to compare static and kinetic friction.</p>
+      <span class="open">Open simulation →</span>
+    </a>
+  </div>
+
+  <p class="tip">Tip: open a simulation in a new tab (Ctrl+click, or right-click → Open in new tab) so you can keep the lab handout open alongside it.</p>
+</main>
+</body>
+</html>

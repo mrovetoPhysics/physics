@@ -1,0 +1,722 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Atwood Machine Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: lab bench. Setup rail beside the apparatus, two live sensor graphs beneath, trial log at the bottom. */
+:root{
+  --bg:#e9eeec; --panel:#fbfcfb; --panel-2:#f1f5f3; --ink:#16252a; --muted:#56676c; --rule:#cbd6d3; --grid:#e2e9e7;
+  --accent:#1c6884; --accent-ink:#ffffff; --pos:#2a5cc0; --vel:#bf4518; --fit:#16252a; --sel:rgba(28,104,132,.14);
+  --metal:#a3afb3; --metal-dark:#66757a; --table:#cdb98f; --table-edge:#a48c5b; --cart:#2a5cc0; --cart-ink:#ffffff;
+  --brass:#bb8c2f; --string:#2f3436; --ok:#2c7a4c; --warn:#a4561b;
+  --f-display:"Saira Condensed","Arial Narrow",sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10181a; --panel:#172124; --panel-2:#1d292c; --ink:#e2ebe9; --muted:#93a6a9; --rule:#2c3b3e; --grid:#213033;
+  --accent:#5cb6d3; --accent-ink:#071a21; --pos:#7ea8ff; --vel:#ff8d55; --fit:#f2f6f5; --sel:rgba(92,182,211,.17);
+  --metal:#7d8b8f; --metal-dark:#56656a; --table:#6e5e3f; --table-edge:#8f7a50; --cart:#5f8ff0; --cart-ink:#08142b;
+  --brass:#d3a347; --string:#c9d2d0; --ok:#5fc48a; --warn:#e39a5e; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10181a; --panel:#172124; --panel-2:#1d292c; --ink:#e2ebe9; --muted:#93a6a9; --rule:#2c3b3e; --grid:#213033;
+  --accent:#5cb6d3; --accent-ink:#071a21; --pos:#7ea8ff; --vel:#ff8d55; --fit:#f2f6f5; --sel:rgba(92,182,211,.17);
+  --metal:#7d8b8f; --metal-dark:#56656a; --table:#6e5e3f; --table-edge:#8f7a50; --cart:#5f8ff0; --cart-ink:#08142b;
+  --brass:#d3a347; --string:#c9d2d0; --ok:#5fc48a; --warn:#e39a5e; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1400px;margin:0 auto;padding-block:18px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;margin-bottom:14px}
+.top h1{font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:.01em;margin:0;text-wrap:balance;line-height:1.05}
+.top .eyebrow{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:2px}
+.top .given{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 16px}
+.top .given b{color:var(--ink);font-weight:500}
+
+.app{display:grid;gap:14px;grid-template-columns:300px minmax(0,1fr);
+  grid-template-areas:"controls stage" "graphs graphs" "trials trials"}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px}
+h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin:0;font-size:14px;color:var(--muted)}
+
+/* Controls */
+.controls{grid-area:controls;padding:16px;display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field .lbl{font-weight:700;font-size:14px}
+.field .sub{font-weight:400;color:var(--muted);font-size:12.5px}
+.mass-row{display:flex;align-items:center;gap:10px}
+.mass-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.num{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:6px;background:var(--panel-2);padding-right:8px}
+.num input{width:72px;border:0;background:transparent;color:var(--ink);font-family:var(--f-mono);font-size:15px;padding:6px 4px 6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.num span{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.num:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.num input:focus{outline:none}
+.field.bad .num{border-color:var(--warn)}
+.err{color:var(--warn);font-size:12.5px;min-height:0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select{font:inherit;font-size:14px;color:var(--ink);background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;padding:6px 8px;width:100%}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btns{display:grid;grid-template-columns:1.4fr 1fr;gap:8px}
+button{font:inherit;font-weight:700;font-size:14.5px;border-radius:6px;padding:9px 12px;cursor:pointer;border:1px solid var(--rule);background:var(--panel-2);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button:hover:not(:disabled){filter:brightness(1.06)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.small{font-size:13px;padding:6px 10px;font-weight:700}
+.status{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;background:var(--panel-2);border-radius:6px;padding:9px 10px;margin:0}
+.dot{flex:none;width:9px;height:9px;border-radius:50%;margin-top:5px;background:var(--metal)}
+.status[data-s=running] .dot{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+.status[data-s=done] .dot{background:var(--ok)}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.status[data-s=running] .dot{animation:none}}
+.lockhint{font-size:12.5px;color:var(--muted);margin:-8px 0 0}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:16px;min-width:0}
+fieldset:disabled .mass-row,fieldset:disabled .pair{opacity:.55}
+
+/* Stage */
+.stage{grid-area:stage;padding:12px 12px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.stage-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.clock{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stage .cv{height:340px}
+.cv{position:relative;width:100%}
+.cv canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* Graphs */
+.graphs{grid-area:graphs;display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0}
+.graph{padding:12px 12px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.graph header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.graph header .hint{font-size:12.5px;color:var(--muted)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.graph .cv{height:270px}
+#vt{touch-action:pan-y;cursor:crosshair}
+.fitbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border-top:1px solid var(--rule);padding-top:10px;margin-top:2px}
+.range-in{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted)}
+.range-in input{width:64px;font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;padding:5px 6px;text-align:right}
+.range-in input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.eqbox{flex:1;min-width:200px;display:flex;flex-direction:column}
+.eq{font-family:var(--f-mono);font-size:17px;font-weight:500;font-variant-numeric:tabular-nums}
+.eq.empty{font-family:var(--f-body);font-size:13.5px;font-weight:400;color:var(--muted)}
+.fitmeta{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+/* Trials */
+.trials{grid-area:trials;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.trials-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.trials-head .acts{display:flex;gap:8px;flex-wrap:wrap}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th{font-family:var(--f-display);font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-size:12.5px;color:var(--muted);text-align:right;padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;padding:7px 10px;border-bottom:1px solid var(--grid)}
+td.empty{font-family:var(--f-body);text-align:left;color:var(--muted)}
+td .del{background:none;border:0;color:var(--muted);padding:2px 6px;font-size:16px;line-height:1}
+td .del:hover{color:var(--warn)}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.toast{font-size:13px;color:var(--ok);min-height:1em}
+textarea.copybuf{position:fixed;left:-9999px;top:0}
+
+@media (max-width:980px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "controls" "graphs" "trials"}
+  .stage .cv{height:300px}
+}
+@media (max-width:760px){
+  .graphs{grid-template-columns:minmax(0,1fr)}
+  .stage .cv{height:240px}
+  .graph .cv{height:240px}
+  .top h1{font-size:25px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="eyebrow">Newton's second law · virtual lab</span>
+      <h1>Modified Atwood Machine</h1>
+    </div>
+    <div class="given">
+      <span>g = <b>9.80 m/s²</b></span>
+      <span>track: <b>frictionless</b></span>
+      <span>pulley &amp; string: <b>massless</b></span>
+      <span>drop height: <b>0.60 m</b></span>
+    </div>
+  </header>
+
+  <main class="app">
+    <aside class="panel controls" aria-label="Setup">
+      <h2>Setup</h2>
+      <fieldset id="setup">
+        <div class="field" id="f-mh">
+          <label for="mh">Hanging mass <span class="sub">(falls off the table)</span></label>
+          <div class="mass-row">
+            <input type="range" id="mhRange" min="5" max="500" step="5" aria-label="Hanging mass slider">
+            <span class="num"><input type="number" id="mh" min="1" max="5000" step="1" inputmode="decimal"><span>g</span></span>
+          </div>
+          <div class="err" id="mhErr"></div>
+        </div>
+        <div class="field" id="f-mc">
+          <label for="mc">Cart mass <span class="sub">(rolls on the track)</span></label>
+          <div class="mass-row">
+            <input type="range" id="mcRange" min="50" max="2000" step="10" aria-label="Cart mass slider">
+            <span class="num"><input type="number" id="mc" min="1" max="5000" step="1" inputmode="decimal"><span>g</span></span>
+          </div>
+          <div class="err" id="mcErr"></div>
+        </div>
+        <div class="pair">
+          <div class="field">
+            <label for="noise">Sensor noise</label>
+            <select id="noise">
+              <option value="off">Off</option>
+              <option value="low">Low</option>
+              <option value="typical" selected>Typical</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rate">Sample rate</label>
+            <select id="rate">
+              <option value="20" selected>20 Hz</option>
+              <option value="30">30 Hz</option>
+              <option value="50">50 Hz</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+      <p class="lockhint" id="lockhint" hidden>Press Reset to change the setup.</p>
+      <div class="btns">
+        <button class="primary" id="start">Start run</button>
+        <button id="reset">Reset</button>
+      </div>
+      <p class="status" id="status" data-s="ready" role="status"><span class="dot"></span><span id="statusText">Ready. Set the masses, then press Start run.</span></p>
+    </aside>
+
+    <section class="panel stage" aria-label="Apparatus">
+      <div class="stage-head">
+        <h2>Apparatus</h2>
+        <span class="clock" id="clock">t = 0.00 s</span>
+      </div>
+      <div class="cv"><canvas id="stage" role="img" aria-label="Cart on a frictionless track connected by a string over a pulley to a hanging mass. A motion detector at the left end measures the cart's position."></canvas></div>
+    </section>
+
+    <section class="graphs">
+      <article class="panel graph">
+        <header>
+          <h3><span class="swatch" style="background:var(--pos)"></span>Position vs. time</h3>
+          <span class="hint">distance from motion detector</span>
+        </header>
+        <div class="cv"><canvas id="xt" role="img" aria-label="Position versus time graph"></canvas></div>
+      </article>
+      <article class="panel graph">
+        <header>
+          <h3><span class="swatch" style="background:var(--vel)"></span>Velocity vs. time</h3>
+          <span class="hint">drag across a straight section to fit a line</span>
+        </header>
+        <div class="cv"><canvas id="vt" role="img" aria-label="Velocity versus time graph. Drag horizontally to select a region for a linear fit."></canvas></div>
+        <div class="fitbar">
+          <div class="range-in">
+            <label for="selFrom">Fit from</label><input id="selFrom" type="number" step="0.05" min="0">
+            <label for="selTo">to</label><input id="selTo" type="number" step="0.05" min="0"><span>s</span>
+          </div>
+          <div class="eqbox">
+            <output class="eq empty" id="eq">Run a trial, then drag across the graph to fit.</output>
+            <span class="fitmeta" id="fitmeta"></span>
+          </div>
+          <button class="small" id="saveTrial" disabled>Save trial</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel trials" aria-label="Saved trials">
+      <div class="trials-head">
+        <h2>Saved trials</h2>
+        <div class="acts">
+          <span class="toast" id="toast" aria-live="polite"></span>
+          <button class="small" id="copyTbl">Copy table</button>
+          <button class="small" id="clearTbl">Clear all</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Trial</th><th>Hanging mass (g)</th><th>Cart mass (g)</th><th>Fit slope (m/s²)</th><th>R²</th><th>Fit window (s)</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="note">"Copy table" puts tab-separated data on your clipboard to paste into Sheets or Excel. Trials are kept in this browser only.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+const G = 9.80, H_DROP = 0.60, CART_LEN = 0.14, BUMPER_X = 1.25, X0_NOM = 0.20, T_CAP = 20;
+const NOISE = { off: 0, low: 0.0005, typical: 0.0015, high: 0.004 }; // position noise σ in meters
+const $ = id => document.getElementById(id);
+const STORE = 'atwood-lab-trials-v1';
+
+const S = {
+  phase: 'ready', mh: 100, mc: 500, noise: 'typical', rate: 20,
+  traj: null, T: [], X: [], V: [], nRev: 0, tSim: 0, startWall: 0, runId: 0,
+  sel: null, fit: null, hover: { xt: null, vt: null }, savedSig: null, trials: []
+};
+
+/* ---------- theme tokens for canvas ---------- */
+let C = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue('--' + n).trim();
+  ['ink','muted','rule','grid','panel','panel-2','accent','pos','vel','fit','sel','metal','metal-dark','table','table-edge','cart','cart-ink','brass','string','bg']
+    .forEach(k => C[k.replace(/-(\w)/g, (_, c) => c.toUpperCase())] = g(k));
+  drawAll();
+}
+
+/* ---------- helpers ---------- */
+function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function niceCeil(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v - 1e-12) return m * p; return 10 * p; }
+function niceStep(range, n) { const raw = range / Math.max(1, n); const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
+function ticks(a, b, n) { const s = niceStep(b - a, n); const out = []; for (let v = Math.ceil(a / s - 1e-9) * s; v <= b + 1e-9; v += s) out.push(Math.abs(v) < s * 1e-6 ? 0 : v); return { vals: out, dec: Math.max(0, Math.ceil(-Math.log10(s) - 1e-9)) }; }
+const minus = s => s.replace('-', '−');
+function setupCanvas(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: r.width, h: r.height };
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+/* ---------- physics ---------- */
+function buildRun() {
+  const mh = S.mh / 1000, mc = S.mc / 1000;
+  const a = mh * G / (mh + mc);
+  const x0 = X0_NOM + (Math.random() - 0.5) * 0.03;
+  const L = BUMPER_X - CART_LEN - x0;
+  const tRel = 0.3 + Math.random() * 0.4;
+  const tau1 = Math.sqrt(2 * H_DROP / a), v1 = a * tau1;
+  const tau2 = tau1 + (L - H_DROP) / v1;
+  const tStop = tRel + tau2;
+  return { a, x0, L, tRel, tau1, v1, tau2, tStop, tEnd: Math.min(tStop + 0.8, T_CAP), capped: tStop + 0.8 > T_CAP };
+}
+function trueState(tr, t) {
+  if (t <= tr.tRel) return { d: 0, v: 0, stage: 'held' };
+  const tau = t - tr.tRel;
+  if (tau < tr.tau1) return { d: 0.5 * tr.a * tau * tau, v: tr.a * tau, stage: 'accel' };
+  if (tau < tr.tau2) return { d: H_DROP + tr.v1 * (tau - tr.tau1), v: tr.v1, stage: 'coast' };
+  return { d: tr.L, v: 0, stage: 'stopped' };
+}
+function sampleRun(tr) {
+  const dt = 1 / S.rate, n = Math.floor(tr.tEnd / dt + 1e-9) + 1, sig = NOISE[S.noise];
+  const T = [], X = [], V = new Array(n).fill(NaN);
+  for (let i = 0; i < n; i++) {
+    const t = i * dt;
+    const x = tr.x0 + trueState(tr, t).d + sig * gauss();
+    T.push(t); X.push(Math.round(x * 10000) / 10000); // 0.1 mm resolution
+  }
+  for (let i = 1; i < n - 1; i++) V[i] = (X[i + 1] - X[i - 1]) / (2 * dt); // central difference, like logger software
+  return { T, X, V };
+}
+
+/* ---------- run control ---------- */
+function readMass(id, errId, fieldId) {
+  const v = parseFloat($(id).value);
+  const ok = isFinite(v) && v >= 1 && v <= 5000;
+  $(fieldId).classList.toggle('bad', !ok);
+  $(errId).textContent = ok ? '' : 'Enter a mass from 1 to 5000 g.';
+  return ok ? Math.round(v * 10) / 10 : null;
+}
+function start() {
+  if (S.phase !== 'ready') return;
+  const mh = readMass('mh', 'mhErr', 'f-mh'), mc = readMass('mc', 'mcErr', 'f-mc');
+  if (mh == null || mc == null) return;
+  S.mh = mh; S.mc = mc; S.noise = $('noise').value; S.rate = +$('rate').value;
+  S.traj = buildRun();
+  Object.assign(S, sampleRun(S.traj));
+  S.nRev = 0; S.tSim = 0; S.sel = null; S.fit = null; S.runId++; S.savedSig = null;
+  S.phase = 'running'; S.startWall = performance.now();
+  syncUI(); updateFitUI();
+  requestAnimationFrame(frame);
+}
+function frame(now) {
+  if (S.phase !== 'running') return;
+  S.tSim = (now - S.startWall) / 1000;
+  if (S.tSim >= S.traj.tEnd) { S.tSim = S.traj.tEnd; S.nRev = S.T.length; S.phase = 'done'; syncUI(); }
+  else S.nRev = Math.min(S.T.length, Math.floor(S.tSim * S.rate + 1e-9) + 1);
+  if (S.sel) computeFit();
+  updateStatus(); drawAll();
+  if (S.phase === 'running') requestAnimationFrame(frame);
+}
+function reset() {
+  S.phase = 'ready'; S.traj = null; S.T = []; S.X = []; S.V = []; S.nRev = 0; S.tSim = 0;
+  S.sel = null; S.fit = null; S.savedSig = null; S.hover = { xt: null, vt: null };
+  $('selFrom').value = ''; $('selTo').value = '';
+  syncUI(); updateFitUI(); drawAll();
+}
+function syncUI() {
+  const ready = S.phase === 'ready';
+  $('setup').disabled = !ready;
+  $('lockhint').hidden = ready;
+  $('start').disabled = !ready;
+  updateStatus();
+}
+function updateStatus() {
+  let s = 'ready', txt = 'Ready. Set the masses, then press Start run.';
+  if (S.phase === 'running') {
+    s = 'running';
+    txt = { held: 'Recording. Cart is being held…', accel: 'Released. Cart is accelerating.', coast: 'Hanging mass hit the floor. Cart is coasting.', stopped: 'Cart stopped at the bumper.' }[trueState(S.traj, S.tSim).stage];
+  } else if (S.phase === 'done') {
+    s = 'done';
+    txt = (S.traj.capped ? 'Recording hit the 20 s limit. ' : 'Run complete. ') + 'Drag across the velocity graph to fit a straight section.';
+  }
+  $('status').dataset.s = s; $('statusText').textContent = txt;
+  $('clock').textContent = 't = ' + S.tSim.toFixed(2) + ' s';
+}
+
+/* ---------- fitting ---------- */
+function computeFit() {
+  if (!S.sel) { S.fit = null; return; }
+  const { t0, t1 } = S.sel, idx = [];
+  for (let i = 1; i < S.nRev - 1; i++) if (S.T[i] >= t0 - 1e-9 && S.T[i] <= t1 + 1e-9 && isFinite(S.V[i])) idx.push(i);
+  const n = idx.length;
+  if (n < 3) { S.fit = { n }; return; }
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const i of idx) { const t = S.T[i], v = S.V[i]; sx += t; sy += v; sxx += t * t; sxy += t * v; }
+  const den = n * sxx - sx * sx, m = (n * sxy - sx * sy) / den, b = (sy - m * sx) / n, ybar = sy / n;
+  let ssRes = 0, ssTot = 0;
+  for (const i of idx) { const r = S.V[i] - (m * S.T[i] + b); ssRes += r * r; ssTot += (S.V[i] - ybar) ** 2; }
+  S.fit = { n, m, b, r2: ssTot > 0 ? 1 - ssRes / ssTot : NaN };
+}
+function fmtNum(v, d) { return minus(v.toFixed(d)); }
+function updateFitUI() {
+  const eq = $('eq'), meta = $('fitmeta'), btn = $('saveTrial');
+  const sig = S.sel ? S.runId + ':' + S.sel.t0.toFixed(3) + ':' + S.sel.t1.toFixed(3) : null;
+  if (!S.T.length) { eq.className = 'eq empty'; eq.textContent = 'Run a trial, then drag across the graph to fit.'; meta.textContent = ''; btn.disabled = true; btn.textContent = 'Save trial'; return; }
+  if (!S.sel) { eq.className = 'eq empty'; eq.textContent = 'Drag across a straight section of the velocity graph.'; meta.textContent = ''; btn.disabled = true; btn.textContent = 'Save trial'; return; }
+  if (!S.fit || S.fit.n < 3) { eq.className = 'eq empty'; eq.textContent = 'Select at least 3 data points.'; meta.textContent = ''; btn.disabled = true; btn.textContent = 'Save trial'; return; }
+  const f = S.fit;
+  eq.className = 'eq';
+  eq.textContent = 'v = ' + f.m.toFixed(3) + ' t ' + (f.b < 0 ? '− ' : '+ ') + Math.abs(f.b).toFixed(3);
+  meta.textContent = 'R² = ' + (isFinite(f.r2) ? f.r2.toFixed(4) : '—') + ' · ' + f.n + ' points · v in m/s, t in s';
+  const saved = S.savedSig === sig;
+  btn.disabled = saved || S.phase !== 'done';
+  btn.textContent = saved ? 'Saved ✓' : 'Save trial';
+}
+function setSel(t0, t1, fromInputs) {
+  if (t1 < t0) [t0, t1] = [t1, t0];
+  S.sel = { t0, t1 };
+  if (!fromInputs) { $('selFrom').value = t0.toFixed(2); $('selTo').value = t1.toFixed(2); }
+  computeFit(); updateFitUI(); drawGraphs();
+}
+function clearSel() { S.sel = null; S.fit = null; $('selFrom').value = ''; $('selTo').value = ''; updateFitUI(); drawGraphs(); }
+
+/* ---------- graph ranges ---------- */
+function ranges() {
+  if (!S.traj) return { t: [0, 5], x: [0, 1.2], v: [-0.1, 1] };
+  const tr = S.traj, sigV = NOISE[S.noise] * Math.SQRT1_2 * S.rate;
+  const vTop = niceCeil(tr.v1 * 1.1 + 3 * sigV);
+  return { t: [0, niceCeil(tr.tEnd)], x: [0, 1.2], v: [-Math.max(0.1 * vTop, 3 * sigV), vTop] };
+}
+
+/* ---------- plotting ---------- */
+const MARGIN = { l: 54, r: 14, t: 12, b: 38 };
+function drawPlot(cv, P) {
+  const { ctx, w, h } = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const m = MARGIN, pw = Math.max(10, w - m.l - m.r), ph = Math.max(10, h - m.t - m.b);
+  const [x0, x1] = P.xr, [y0, y1] = P.yr;
+  const X = t => m.l + (t - x0) / (x1 - x0) * pw, Y = y => m.t + (1 - (y - y0) / (y1 - y0)) * ph;
+  cv._map = { m, pw, ph, xr: P.xr, yr: P.yr };
+
+  const xt = ticks(x0, x1, Math.max(3, Math.floor(pw / 70))), yt = ticks(y0, y1, Math.max(3, Math.floor(ph / 45)));
+  ctx.lineWidth = 1; ctx.strokeStyle = C.grid;
+  ctx.beginPath();
+  xt.vals.forEach(v => { const px = Math.round(X(v)) + .5; ctx.moveTo(px, m.t); ctx.lineTo(px, m.t + ph); });
+  yt.vals.forEach(v => { const py = Math.round(Y(v)) + .5; ctx.moveTo(m.l, py); ctx.lineTo(m.l + pw, py); });
+  ctx.stroke();
+  if (y0 < 0 && y1 > 0) { ctx.strokeStyle = C.metal; ctx.beginPath(); const py = Math.round(Y(0)) + .5; ctx.moveTo(m.l, py); ctx.lineTo(m.l + pw, py); ctx.stroke(); }
+  ctx.strokeStyle = C.rule; ctx.strokeRect(m.l + .5, m.t + .5, pw - 1, ph - 1);
+
+  ctx.fillStyle = C.muted; ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  xt.vals.forEach(v => ctx.fillText(minus(v.toFixed(xt.dec)), X(v), m.t + ph + 5));
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  yt.vals.forEach(v => ctx.fillText(minus(v.toFixed(yt.dec)), m.l - 6, Y(v)));
+  ctx.font = '600 12.5px "Saira Condensed","Arial Narrow",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(P.xLabel, m.l + pw / 2, h - 2);
+  ctx.save(); ctx.translate(13, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText(P.yLabel, 0, 0); ctx.restore();
+
+  ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, pw, ph); ctx.clip();
+  if (P.sel) { ctx.fillStyle = C.sel; const a = X(P.sel.t0), b = X(P.sel.t1); ctx.fillRect(a, m.t, b - a, ph);
+    ctx.strokeStyle = C.accent; ctx.globalAlpha = .6; ctx.beginPath(); ctx.moveTo(a + .5, m.t); ctx.lineTo(a + .5, m.t + ph); ctx.moveTo(b - .5, m.t); ctx.lineTo(b - .5, m.t + ph); ctx.stroke(); ctx.globalAlpha = 1; }
+  ctx.fillStyle = P.color;
+  const r = P.pts.length > 300 ? 1.8 : 2.4;
+  for (const [t, y] of P.pts) { ctx.beginPath(); ctx.arc(X(t), Y(y), r, 0, Math.PI * 2); ctx.fill(); }
+  if (P.fit) {
+    const { m: k, b, t0, t1 } = P.fit, pad = (t1 - t0) * 0.15;
+    ctx.strokeStyle = C.fit; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(X(t0 - pad), Y(k * (t0 - pad) + b)); ctx.lineTo(X(t1 + pad), Y(k * (t1 + pad) + b)); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(X(t0), Y(k * t0 + b)); ctx.lineTo(X(t1), Y(k * t1 + b)); ctx.stroke();
+  }
+  if (P.hover) {
+    const [t, y] = P.hover, px = X(t), py = Y(y);
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(px, m.t); ctx.lineTo(px, m.t + ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.panel; ctx.strokeStyle = P.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+  if (P.hover) {
+    const [t, y] = P.hover, label = 't = ' + t.toFixed(2) + ' s   ' + P.sym + ' = ' + minus(y.toFixed(3)) + ' ' + P.unit;
+    ctx.font = '11.5px ' + getComputedStyle(document.body).getPropertyValue('--f-mono');
+    const tw = ctx.measureText(label).width + 14, bh = 22;
+    let bx = X(t) + 10, by = m.t + 6;
+    if (bx + tw > m.l + pw) bx = X(t) - 10 - tw;
+    ctx.fillStyle = C.panel; ctx.strokeStyle = C.rule; ctx.lineWidth = 1;
+    roundRect(ctx, bx, by, tw, bh, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, bx + 7, by + bh / 2);
+  }
+  if (P.placeholder) {
+    ctx.fillStyle = C.muted; ctx.font = '14px "Atkinson Hyperlegible",system-ui,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(P.placeholder, m.l + pw / 2, m.t + ph / 2);
+  }
+}
+function drawGraphs() {
+  const R = ranges(), xs = [], vs = [];
+  for (let i = 0; i < S.nRev; i++) xs.push([S.T[i], S.X[i]]);
+  for (let i = 1; i < S.nRev - 1; i++) if (isFinite(S.V[i])) vs.push([S.T[i], S.V[i]]);
+  const ph = S.phase === 'ready' ? 'Press Start run to record data.' : null;
+  const hx = S.hover.xt != null && S.hover.xt < S.nRev ? [S.T[S.hover.xt], S.X[S.hover.xt]] : null;
+  const hv = S.hover.vt != null && S.hover.vt < S.nRev - 1 && isFinite(S.V[S.hover.vt]) ? [S.T[S.hover.vt], S.V[S.hover.vt]] : null;
+  const fit = S.fit && S.fit.n >= 3 ? { m: S.fit.m, b: S.fit.b, t0: S.sel.t0, t1: S.sel.t1 } : null;
+  drawPlot($('xt'), { xr: R.t, yr: R.x, xLabel: 'time (s)', yLabel: 'position (m)', color: C.pos, pts: xs, sel: S.sel, hover: hx, sym: 'x', unit: 'm', placeholder: ph });
+  drawPlot($('vt'), { xr: R.t, yr: R.v, xLabel: 'time (s)', yLabel: 'velocity (m/s)', color: C.vel, pts: vs, sel: S.sel, fit, hover: hv, sym: 'v', unit: 'm/s', placeholder: ph });
+}
+
+/* ---------- apparatus ---------- */
+function drawStage() {
+  const cv = $('stage'); const { ctx, w, h } = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const HB_MAX = 0.095, pr = 0.024, STR_Y = -0.039, pcx = BUMPER_X + 0.07, pcy = STR_Y + pr;
+  const yF = pcy + 0.07 + 0.012 + HB_MAX + H_DROP;
+  const wx0 = -0.12, wx1 = pcx + pr + 0.15, wy0 = -0.15, wy1 = yF + 0.05;
+  const sc = Math.min((w - 16) / (wx1 - wx0), (h - 16) / (wy1 - wy0));
+  const ox = (w - (wx1 - wx0) * sc) / 2 - wx0 * sc, oy = (h - (wy1 - wy0) * sc) / 2 - wy0 * sc;
+  const px = x => ox + x * sc, py = y => oy + y * sc, L = v => v * sc;
+  const mono = getComputedStyle(document.body).getPropertyValue('--f-mono');
+  const fs = Math.max(10, Math.min(13, L(0.026)));
+
+  let x0 = X0_NOM, d = 0, running = S.phase === 'running';
+  if (S.traj && S.phase !== 'ready') { x0 = S.traj.x0; d = trueState(S.traj, S.tSim).d; }
+  const xc = x0 + d;
+
+  // floor
+  ctx.strokeStyle = C.metalDark; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, py(yF)); ctx.lineTo(w, py(yF)); ctx.stroke();
+  ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = -20; x < w + 20; x += 12) { ctx.moveTo(x, py(yF) + 1); ctx.lineTo(x - 9, py(yF) + 10); }
+  ctx.stroke();
+
+  // table legs and slab
+  ctx.fillStyle = C.tableEdge;
+  [0.0, BUMPER_X - 0.04].forEach(lx => ctx.fillRect(px(lx), py(0.035), L(0.03), py(yF) - py(0.035)));
+  const edgeX = BUMPER_X + 0.05;
+  ctx.fillStyle = C.table; ctx.fillRect(0, py(0), px(edgeX), L(0.035));
+  ctx.fillStyle = C.tableEdge; ctx.fillRect(0, py(0.032), px(edgeX), L(0.004));
+
+  // ruler on table edge (distance from motion detector)
+  ctx.strokeStyle = C.ink; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath();
+  for (let i = 0; i <= 24; i++) { const x = i * 0.05; const tl = i % 2 === 0 ? 0.012 : 0.007; ctx.moveTo(px(x) + .5, py(0)); ctx.lineTo(px(x) + .5, py(tl)); }
+  ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = C.ink; ctx.font = Math.max(9, fs - 2) + 'px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 6; i++) { const x = i * 0.2; ctx.fillText(i === 6 ? '1.2 m' : (i * 0.2).toFixed(1), px(x), py(0.022)); }
+
+  // motion detector
+  ctx.fillStyle = C.metalDark; roundRect(ctx, px(-0.075), py(-0.075), L(0.07), L(0.075), L(0.006)); ctx.fill();
+  ctx.fillStyle = C.metal; ctx.fillRect(px(-0.012), py(-0.065), L(0.007), L(0.05));
+  ctx.fillStyle = C.muted; ctx.font = Math.max(9, fs - 2) + 'px ' + mono; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('motion detector', px(-0.075), py(-0.085));
+  if (running) {
+    ctx.strokeStyle = C.accent; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 3; k++) {
+      const f = ((S.tSim * 1.6) + k / 3) % 1, rr = L(0.02 + f * 0.16);
+      ctx.globalAlpha = 1 - f; ctx.beginPath(); ctx.arc(px(-0.005), py(-0.04), rr, -0.45, 0.45); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // bumper
+  ctx.fillStyle = C.metalDark; ctx.fillRect(px(BUMPER_X), py(-0.045), L(0.018), L(0.045));
+
+  // pulley clamp + rod
+  ctx.fillStyle = C.metalDark; ctx.fillRect(px(BUMPER_X + 0.028), py(-0.012), L(0.026), L(0.06));
+  ctx.strokeStyle = C.metalDark; ctx.lineWidth = Math.max(2, L(0.007)); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(px(BUMPER_X + 0.04), py(-0.004)); ctx.lineTo(px(pcx), py(pcy)); ctx.stroke(); ctx.lineCap = 'butt';
+
+  // hanging mass geometry
+  const hb = 0.035 + 0.06 * Math.max(0, Math.min(1, Math.log10(S.mh / 5) / Math.log10(100)));
+  const hx = pcx + pr, hook = 0.014;
+  const yTop0 = yF - H_DROP - hook - hb, dHang = Math.min(d, H_DROP), yTop = yTop0 + dHang;
+  const slack = Math.max(0, d - H_DROP);
+
+  // string
+  ctx.strokeStyle = C.string; ctx.lineWidth = 1.4; ctx.beginPath();
+  const sx0 = px(xc + CART_LEN + 0.004), sy0 = py(STR_Y), sx1 = px(pcx), sy1 = py(STR_Y);
+  ctx.moveTo(sx0, sy0);
+  if (slack > 0) ctx.quadraticCurveTo((sx0 + sx1) / 2, sy0 + L(Math.min(0.06, slack * 0.6)) * 2, sx1, sy1);
+  else ctx.lineTo(sx1, sy1);
+  ctx.moveTo(px(hx), py(pcy)); ctx.lineTo(px(hx), py(yTop)); ctx.stroke();
+
+  // pulley wheel
+  ctx.fillStyle = C.metal; ctx.strokeStyle = C.metalDark; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(px(pcx), py(pcy), L(pr), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  const ang = (d - slack) / pr;
+  ctx.beginPath();
+  for (let k = 0; k < 3; k++) { const a = ang + k * Math.PI / 1.5; ctx.moveTo(px(pcx), py(pcy)); ctx.lineTo(px(pcx) + Math.cos(a) * L(pr * 0.85), py(pcy) + Math.sin(a) * L(pr * 0.85)); }
+  ctx.stroke();
+  ctx.fillStyle = C.metalDark; ctx.beginPath(); ctx.arc(px(pcx), py(pcy), Math.max(1.5, L(0.005)), 0, Math.PI * 2); ctx.fill();
+
+  // cart
+  const bodyT = -0.062, bodyB = -0.02;
+  const bars = Math.max(0, Math.min(6, Math.round((S.mc - 250) / 250)));
+  ctx.fillStyle = C.metalDark;
+  for (let k = 0; k < bars; k++) roundRect(ctx, px(xc + 0.025), py(bodyT - 0.009 * (k + 1)), L(CART_LEN - 0.05), L(0.0075), 1.5), ctx.fill();
+  ctx.fillStyle = C.cart; roundRect(ctx, px(xc), py(bodyT), L(CART_LEN), L(bodyB - bodyT), Math.max(2, L(0.006))); ctx.fill();
+  ctx.fillStyle = C.metalDark;
+  [xc + 0.03, xc + CART_LEN - 0.03].forEach(wx => { ctx.beginPath(); ctx.arc(px(wx), py(-0.011), L(0.011), 0, Math.PI * 2); ctx.fill(); });
+  ctx.fillStyle = C.cartInk; ctx.font = '500 ' + fs + 'px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmtMass(S.mc), px(xc + CART_LEN / 2), py((bodyT + bodyB) / 2));
+
+  // hanging mass
+  ctx.strokeStyle = C.metalDark; ctx.lineWidth = Math.max(1.5, L(0.004));
+  ctx.beginPath(); ctx.moveTo(px(hx), py(yTop)); ctx.lineTo(px(hx), py(yTop + hook)); ctx.stroke();
+  ctx.fillStyle = C.brass; ctx.fillRect(px(hx - 0.032), py(yTop + hook), L(0.064), L(hb));
+  ctx.strokeStyle = C.ink; ctx.globalAlpha = .25; ctx.lineWidth = 1; ctx.beginPath();
+  for (let yy = yTop + hook + 0.013; yy < yTop + hook + hb - 0.005; yy += 0.013) { ctx.moveTo(px(hx - 0.032), py(yy) + .5); ctx.lineTo(px(hx + 0.032), py(yy) + .5); }
+  ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = C.ink; ctx.font = '500 ' + fs + 'px ' + mono; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmtMass(S.mh), px(hx + 0.045), py(yTop + hook + hb / 2));
+
+  // drop height dimension (before release)
+  if (d === 0) {
+    const yB = yTop0 + hook + hb, dx = px(hx - 0.075);
+    ctx.strokeStyle = C.muted; ctx.fillStyle = C.muted; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(px(hx - 0.09), py(yB) + .5); ctx.lineTo(px(hx - 0.032), py(yB) + .5); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(dx, py(yB) + 4); ctx.lineTo(dx, py(yF) - 4); ctx.stroke();
+    const arrow = (y, dir) => { ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx - 4, y + 6 * dir); ctx.lineTo(dx + 4, y + 6 * dir); ctx.closePath(); ctx.fill(); };
+    arrow(py(yB) + 1, 1); arrow(py(yF) - 1, -1);
+    ctx.save(); ctx.translate(dx - 8, (py(yB) + py(yF)) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.font = Math.max(9, fs - 1) + 'px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText('0.60 m drop', 0, 0); ctx.restore();
+  }
+}
+function fmtMass(g) { return (Number.isInteger(g) ? g : g.toFixed(1)) + ' g'; }
+
+function drawAll() { if (!C.ink) return; drawStage(); drawGraphs(); }
+
+/* ---------- graph interaction ---------- */
+function evtT(cv, e) {
+  const M = cv._map; if (!M) return null;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left;
+  const f = Math.max(0, Math.min(1, (x - M.m.l) / M.pw));
+  return M.xr[0] + f * (M.xr[1] - M.xr[0]);
+}
+function nearestIdx(t, needV) {
+  if (!S.nRev) return null;
+  let i = Math.round(t * S.rate);
+  const lo = needV ? 1 : 0, hi = needV ? S.nRev - 2 : S.nRev - 1;
+  if (hi < lo) return null;
+  return Math.max(lo, Math.min(hi, i));
+}
+let drag = null;
+const vt = $('vt'), xtC = $('xt');
+vt.addEventListener('pointerdown', e => {
+  if (S.nRev < 5) return;
+  const t = evtT(vt, e); if (t == null) return;
+  drag = { t, x: e.clientX, moved: false, id: e.pointerId };
+  try { vt.setPointerCapture(e.pointerId); } catch (_) {}
+});
+vt.addEventListener('pointermove', e => {
+  const t = evtT(vt, e); if (t == null) return;
+  if (drag) {
+    if (!drag.moved && Math.abs(e.clientX - drag.x) > 4) drag.moved = true;
+    if (drag.moved) { S.hover.vt = null; setSel(Math.min(drag.t, t), Math.max(drag.t, t)); return; }
+  }
+  S.hover.vt = nearestIdx(t, true); drawGraphs();
+});
+const endDrag = () => { if (drag && !drag.moved) clearSel(); drag = null; };
+vt.addEventListener('pointerup', endDrag);
+vt.addEventListener('pointercancel', () => { drag = null; });
+vt.addEventListener('pointerleave', () => { if (!drag) { S.hover.vt = null; drawGraphs(); } });
+xtC.addEventListener('pointermove', e => { const t = evtT(xtC, e); if (t == null) return; S.hover.xt = nearestIdx(t, false); drawGraphs(); });
+xtC.addEventListener('pointerleave', () => { S.hover.xt = null; drawGraphs(); });
+
+function selFromInputs() {
+  const a = parseFloat($('selFrom').value), b = parseFloat($('selTo').value);
+  if (!S.T.length) return;
+  if (isFinite(a) && isFinite(b) && Math.abs(b - a) > 1e-6) setSel(a, b, true);
+}
+$('selFrom').addEventListener('change', selFromInputs);
+$('selTo').addEventListener('change', selFromInputs);
+
+/* ---------- mass controls ---------- */
+function bindMass(numId, rangeId) {
+  const n = $(numId), r = $(rangeId);
+  r.addEventListener('input', () => { n.value = r.value; });
+  n.addEventListener('input', () => { const v = parseFloat(n.value); if (isFinite(v)) r.value = Math.max(+r.min, Math.min(+r.max, v)); });
+  const sync = () => { const v = parseFloat(n.value); if (isFinite(v) && v >= 1 && v <= 5000) { S[numId] = Math.round(v * 10) / 10; } drawStage(); };
+  n.addEventListener('input', sync); r.addEventListener('input', sync);
+  n.addEventListener('change', () => readMass(numId, numId + 'Err', 'f-' + numId));
+}
+$('mh').value = S.mh; $('mhRange').value = S.mh; $('mc').value = S.mc; $('mcRange').value = S.mc;
+bindMass('mh', 'mhRange'); bindMass('mc', 'mcRange');
+
+$('start').addEventListener('click', start);
+$('reset').addEventListener('click', reset);
+
+/* ---------- trials ---------- */
+function loadTrials() { try { const j = JSON.parse(localStorage.getItem(STORE) || '[]'); if (Array.isArray(j)) S.trials = j; } catch (_) {} }
+function saveTrials() { try { localStorage.setItem(STORE, JSON.stringify(S.trials)); } catch (_) {} }
+function renderTrials() {
+  const tb = $('tbody'); tb.innerHTML = '';
+  if (!S.trials.length) { tb.innerHTML = '<tr><td class="empty" colspan="7">No trials saved yet. Fit a straight section of a run, then press Save trial.</td></tr>'; return; }
+  S.trials.forEach((tr, i) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${i + 1}</td><td>${tr.mh}</td><td>${tr.mc}</td><td>${tr.m.toFixed(3)}</td><td>${isFinite(tr.r2) ? tr.r2.toFixed(4) : '—'}</td><td>${tr.t0.toFixed(2)}–${tr.t1.toFixed(2)}</td><td><button class="del" aria-label="Delete trial ${i + 1}">×</button></td>`;
+    row.querySelector('.del').addEventListener('click', () => { S.trials.splice(i, 1); saveTrials(); renderTrials(); });
+    tb.appendChild(row);
+  });
+}
+$('saveTrial').addEventListener('click', () => {
+  if (!S.fit || S.fit.n < 3) return;
+  S.trials.push({ mh: S.mh, mc: S.mc, m: S.fit.m, b: S.fit.b, r2: S.fit.r2, t0: S.sel.t0, t1: S.sel.t1, noise: S.noise, rate: S.rate });
+  S.savedSig = S.runId + ':' + S.sel.t0.toFixed(3) + ':' + S.sel.t1.toFixed(3);
+  saveTrials(); renderTrials(); updateFitUI(); toast('Trial ' + S.trials.length + ' saved. Press Reset to set up the next one.');
+});
+let toastTimer;
+function toast(msg) { $('toast').textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').textContent = '', 3500); }
+$('copyTbl').addEventListener('click', () => {
+  const lines = ['Trial\tHanging mass (g)\tCart mass (g)\tFit slope (m/s^2)\tFit intercept (m/s)\tR^2\tFit start (s)\tFit end (s)'];
+  S.trials.forEach((t, i) => lines.push([i + 1, t.mh, t.mc, t.m.toFixed(4), t.b.toFixed(4), isFinite(t.r2) ? t.r2.toFixed(4) : '', t.t0.toFixed(2), t.t1.toFixed(2)].join('\t')));
+  const text = lines.join('\n');
+  const fallback = () => { const ta = document.createElement('textarea'); ta.className = 'copybuf'; ta.value = text; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); toast(ok ? 'Table copied.' : 'Copy was blocked by the browser. Select the table and copy it manually.'); };
+  try { navigator.clipboard.writeText(text).then(() => toast('Table copied. Paste it into a spreadsheet.'), fallback); } catch (_) { fallback(); }
+});
+let clearArmed = null;
+$('clearTbl').addEventListener('click', () => {
+  const b = $('clearTbl');
+  if (!S.trials.length) return;
+  if (!clearArmed) { b.textContent = 'Click again to clear'; clearArmed = setTimeout(() => { b.textContent = 'Clear all'; clearArmed = null; }, 3000); return; }
+  clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Clear all';
+  S.trials = []; saveTrials(); renderTrials(); toast('All trials cleared.');
+});
+
+/* ---------- boot ---------- */
+loadTrials(); renderTrials(); syncUI(); updateFitUI();
+readTokens();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens); } catch (_) {}
+new MutationObserver(readTokens).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+new ResizeObserver(() => drawAll()).observe(document.querySelector('.app'));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+})();
+</script>
+
+</body></html>

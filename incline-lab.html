@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incline Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: drawing of the ramp on the left, controls and readouts on the right; stacks on phones. */
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --ink: #1b2430;
+  --muted: #5b6676;
+  --line: #d5dbe3;
+  --accent: #1f6fb2;
+  --ramp: #c9d3de;
+  --block: #e0892b;
+  --f-grav: #c0392b;
+  --f-norm: #1f6fb2;
+  --f-fric: #2e8b57;
+  --display: "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121820; --panel: #1a222c; --ink: #e6ebf1; --muted: #9aa6b5; --line: #2c3744;
+    --accent: #5aa7e6; --ramp: #3a4757; --block: #f0a04b;
+    --f-grav: #ef6f62; --f-norm: #5aa7e6; --f-fric: #5cc98a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121820; --panel: #1a222c; --ink: #e6ebf1; --muted: #9aa6b5; --line: #2c3744;
+  --accent: #5aa7e6; --ramp: #3a4757; --block: #f0a04b;
+  --f-grav: #ef6f62; --f-norm: #5aa7e6; --f-fric: #5cc98a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 32px; display: grid; gap: 16px; }
+header h1 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+@media (max-width: 820px) { .main { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.stage { padding: 8px; }
+canvas { display: block; width: 100%; height: auto; }
+.side { display: grid; gap: 16px; }
+.ctrl { display: grid; gap: 4px; }
+.ctrl + .ctrl { margin-top: 14px; }
+.ctrl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctrl label { font-weight: 500; }
+.ctrl input[type=number] { width: 84px; font: inherit; font-family: var(--mono); padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: right; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.presets button { font: inherit; font-size: 13px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.buttons { display: flex; gap: 8px; }
+.buttons button { flex: 1; font: inherit; font-weight: 600; padding: 9px 0; border-radius: 8px; border: 1px solid var(--accent); cursor: pointer; }
+#run { background: var(--accent); color: #fff; }
+#reset { background: transparent; color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toggles { display: grid; gap: 6px; margin-top: 14px; }
+.toggles label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ro { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.ro.big { grid-column: 1 / -1; border-color: var(--accent); }
+.ro .k { font-size: 12px; color: var(--muted); }
+.ro .v { font-family: var(--mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+.ro.big .v { font-size: 30px; color: var(--accent); }
+.status { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Incline Lab</h1>
+    <p>A block slides down a 5.0 m ramp, starting from rest. Change the setup, press Run, and record the acceleration.</p>
+  </header>
+  <div class="main">
+    <div class="card stage"><canvas id="cv" width="760" height="480" aria-label="Block on an inclined ramp"></canvas></div>
+    <div class="side">
+      <div class="card">
+        <div class="ctrl">
+          <div class="ctrl-head"><label for="ang">Ramp angle (°)</label><input type="number" id="angN" min="0" max="80" step="1" value="30" aria-label="Ramp angle in degrees"></div>
+          <input type="range" id="ang" min="0" max="80" step="1" value="30">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-head"><label for="mass">Mass (kg)</label><input type="number" id="massN" min="0.5" max="20" step="0.5" value="2" aria-label="Mass in kilograms"></div>
+          <input type="range" id="mass" min="0.5" max="20" step="0.5" value="2">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-head"><label for="mu">Friction coefficient, μ</label><input type="number" id="muN" min="0" max="1" step="0.01" value="0" aria-label="Friction coefficient"></div>
+          <input type="range" id="mu" min="0" max="1" step="0.01" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-head"><label for="gN">Gravity, g (m/s²)</label><input type="number" id="gN" min="0.1" max="30" step="0.01" value="9.8"></div>
+          <div class="presets">
+            <button type="button" data-g="9.8">Earth</button>
+            <button type="button" data-g="1.62">Moon</button>
+            <button type="button" data-g="3.71">Mars</button>
+            <button type="button" data-g="24.8">Jupiter</button>
+          </div>
+        </div>
+        <div class="toggles">
+          <label><input type="checkbox" id="showF" checked> Show forces</label>
+          <label><input type="checkbox" id="showC"> Show gravity components</label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="buttons"><button type="button" id="run">Run</button><button type="button" id="reset">Reset</button></div>
+      </div>
+      <div class="card">
+        <div class="readouts">
+          <div class="ro big"><div class="k">Acceleration (m/s²)</div><div class="v" id="ra">0.00</div></div>
+          <div class="ro"><div class="k">Time (s)</div><div class="v" id="rt">0.00</div></div>
+          <div class="ro"><div class="k">Speed (m/s)</div><div class="v" id="rv">0.00</div></div>
+          <div class="ro"><div class="k">Distance (m)</div><div class="v" id="rd">0.00</div></div>
+          <div class="ro"><div class="k">Normal force (N)</div><div class="v" id="rn">0.0</div></div>
+        </div>
+        <p class="status" id="status"></p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const L = 5.0; // ramp length, m
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const state = { ang: 30, m: 2, mu: 0, g: 9.8, t: 0, d: 0, v: 0, running: false, done: false, last: null };
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function physics() {
+    const th = state.ang * Math.PI / 180;
+    const N = state.m * state.g * Math.cos(th);
+    const along = state.m * state.g * Math.sin(th);
+    const maxFric = state.mu * N;
+    const slides = along > maxFric + 1e-9;
+    const fric = slides ? maxFric : along;
+    const a = slides ? (along - fric) / state.m : 0;
+    return { th, N, along, fric, a, slides, W: state.m * state.g };
+  }
+
+  function bind(rangeId, numId, key) {
+    const r = $(rangeId), n = $(numId);
+    const set = v => {
+      v = Math.min(+n.max, Math.max(+n.min, v));
+      if (isNaN(v)) return;
+      state[key] = v; r.value = v; n.value = v; reset();
+    };
+    r.addEventListener('input', () => set(+r.value));
+    n.addEventListener('change', () => set(+n.value));
+  }
+  bind('ang', 'angN', 'ang');
+  bind('mass', 'massN', 'm');
+  bind('mu', 'muN', 'mu');
+  $('gN').addEventListener('change', () => {
+    const v = +$('gN').value;
+    if (v > 0) { state.g = v; reset(); } else { $('gN').value = state.g; }
+  });
+  document.querySelectorAll('.presets button').forEach(b => b.addEventListener('click', () => {
+    state.g = +b.dataset.g; $('gN').value = state.g; reset();
+  }));
+  $('showF').addEventListener('change', draw);
+  $('showC').addEventListener('change', draw);
+
+  function reset() {
+    state.t = 0; state.d = 0; state.v = 0; state.running = false; state.done = false; state.last = null;
+    $('run').textContent = 'Run';
+    update();
+  }
+  $('reset').addEventListener('click', reset);
+  $('run').addEventListener('click', () => {
+    if (state.done) reset();
+    state.running = !state.running;
+    $('run').textContent = state.running ? 'Pause' : 'Run';
+    state.last = null;
+    if (state.running) requestAnimationFrame(step);
+  });
+
+  function step(ts) {
+    if (!state.running) return;
+    if (state.last === null) state.last = ts;
+    let dt = Math.min(0.05, (ts - state.last) / 1000);
+    state.last = ts;
+    const p = physics();
+    if (p.a <= 0) { state.running = false; $('run').textContent = 'Run'; update(); return; }
+    let t = state.t + dt;
+    let d = 0.5 * p.a * t * t;
+    if (d >= L) { t = Math.sqrt(2 * L / p.a); d = L; state.running = false; state.done = true; $('run').textContent = 'Run again'; }
+    state.t = t; state.d = d; state.v = p.a * t;
+    update();
+    if (state.running) requestAnimationFrame(step);
+  }
+
+  function update() {
+    const p = physics();
+    $('ra').textContent = p.a.toFixed(2);
+    $('rt').textContent = state.t.toFixed(2);
+    $('rv').textContent = state.v.toFixed(2);
+    $('rd').textContent = state.d.toFixed(2);
+    $('rn').textContent = p.N.toFixed(1);
+    let msg = '';
+    if (!p.slides && state.ang > 0) msg = 'Friction is strong enough to hold the block in place.';
+    else if (state.ang === 0) msg = 'The ramp is flat, so the block stays at rest.';
+    else if (state.done) msg = 'The block reached the bottom of the ramp.';
+    $('status').textContent = msg;
+    draw();
+  }
+
+  function arrow(x, y, dx, dy, color, label, dashed) {
+    const len = Math.hypot(dx, dy);
+    if (len < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+    if (dashed) ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+    ctx.setLineDash([]);
+    const ux = dx / len, uy = dy / len, h = 11;
+    ctx.beginPath();
+    ctx.moveTo(x + dx, y + dy);
+    ctx.lineTo(x + dx - h * ux - h * 0.55 * uy, y + dy - h * uy + h * 0.55 * ux);
+    ctx.lineTo(x + dx - h * ux + h * 0.55 * uy, y + dy - h * uy - h * 0.55 * ux);
+    ctx.closePath(); ctx.fill();
+    if (label) {
+      ctx.font = '500 14px ' + css('--body');
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, x + dx + ux * 22, y + dy + uy * 22);
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    const rect = cv.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const W = Math.max(300, rect.width), H = W * 0.63;
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const p = physics();
+    const th = p.th;
+    const pad = 50;
+    const scale = Math.min((W - 2 * pad) / (L * Math.cos(th) + 0.001), (H - 2 * pad) / (L * Math.sin(th) + 0.001), (W - 2 * pad) / L);
+    const run = L * Math.cos(th) * scale, rise = L * Math.sin(th) * scale;
+    const x0 = (W - run) / 2, yb = H - pad;      // bottom-left corner
+    const top = { x: x0, y: yb - rise }, bot = { x: x0 + run, y: yb };
+
+    // ground
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(12, yb); ctx.lineTo(W - 12, yb); ctx.stroke();
+    // ramp
+    ctx.fillStyle = css('--ramp');
+    ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bot.x, bot.y); ctx.lineTo(x0, yb); ctx.closePath(); ctx.fill();
+    // angle mark
+    if (state.ang > 0) {
+      ctx.strokeStyle = css('--muted'); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(bot.x, bot.y, 38, Math.PI, Math.PI + th, false); ctx.stroke();
+      ctx.fillStyle = css('--muted'); ctx.font = '500 14px ' + css('--mono');
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(state.ang + '°', bot.x - 46, bot.y - 12);
+    }
+
+    // block position along ramp
+    const ux = Math.cos(th), uy = Math.sin(th);   // down-slope unit vector (screen)
+    const nx = Math.sin(th), ny = -Math.cos(th);  // outward normal (screen)
+    const bs = Math.min(56, Math.max(34, scale * 0.6));
+    const margin = bs / 2 + 4;
+    const travel = Math.hypot(run, rise) - 2 * margin;
+    const s = margin + travel * (state.d / L);
+    const bx = top.x + ux * s, by = top.y + uy * s;
+    const cx = bx + nx * bs / 2, cy = by + ny * bs / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(th);
+    ctx.fillStyle = css('--block');
+    ctx.fillRect(-bs / 2, -bs / 2, bs, bs);
+    ctx.restore();
+
+    if ($('showF').checked) {
+      const k = 120 / p.W; // px per newton, weight arrow = 120 px
+      arrow(cx, cy, 0, p.W * k, css('--f-grav'), 'Fg = ' + p.W.toFixed(1) + ' N');
+      arrow(cx, cy, nx * p.N * k, ny * p.N * k, css('--f-norm'), 'FN = ' + p.N.toFixed(1) + ' N');
+      if (p.fric > 0.0001) arrow(cx, cy, -ux * p.fric * k, -uy * p.fric * k, css('--f-fric'), 'f = ' + p.fric.toFixed(1) + ' N');
+    }
+    if ($('showC').checked) {
+      const k = 120 / p.W;
+      arrow(cx, cy, ux * p.along * k, uy * p.along * k, css('--f-grav'), 'Fg∥ = ' + p.along.toFixed(1) + ' N', true);
+      arrow(cx, cy, -nx * p.N * k, -ny * p.N * k, css('--f-grav'), 'Fg⊥ = ' + p.N.toFixed(1) + ' N', true);
+    }
+  }
+
+  window.addEventListener('resize', draw);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+  update();
+})();
+</script>
+</body>
+</html>
